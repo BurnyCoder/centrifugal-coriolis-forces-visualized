@@ -6,7 +6,30 @@
     <title>Carousel Particle Simulation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            svg: {
+                fontCache: 'global'
+            },
+            startup: {
+                ready: () => {
+                    MathJax.startup.defaultReady();
+                    // Initial typesetting of specific elements once MathJax is ready
+                    // This ensures that content present at load time is typeset.
+                    MathJax.typesetPromise([
+                        document.getElementById('equationsDisplay'),
+                        document.getElementById('infoPanel'),
+                        document.querySelector('.control-panel') // Also typeset controls
+                    ]).catch((err) => console.log('Initial MathJax typesetting error: ', err));
+                }
+            }
+        };
+    </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         body {
@@ -16,7 +39,7 @@
         .control-panel input[type="number"] {
             width: 100%; /* Make inputs take full width of their container */
         }
-        .control-panel label {
+        .control-panel label, .control-panel legend { /* Apply to legends as well */
             display: block; /* Make labels take full width */
             margin-bottom: 0.25rem; /* Add some space below labels */
         }
@@ -40,8 +63,13 @@
             margin-bottom: 1rem; /* mb-4 */
         }
         .equations-panel p {
-            margin-bottom: 0.75rem; /* mb-3 */
+            margin-bottom: 0.5rem; /* Adjusted margin for tighter spacing between new p tags */
             line-height: 1.75;
+        }
+         /* Ensure MathJax has space to render without layout shifts */
+        .mjx-chtml { 
+            display: inline-block; 
+            vertical-align: middle; /* Helps with alignment */
         }
     </style>
 </head>
@@ -59,11 +87,11 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label for="omega" class="text-sm font-medium text-gray-300">Angular Velocity (ω):</label>
+                        <label for="omega" class="text-sm font-medium text-gray-300">Angular Velocity ($\omega$):</label>
                         <input type="number" id="omega" value="0.05" step="0.01" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
                     </div>
                     <div>
-                        <label for="dt" class="text-sm font-medium text-gray-300">Time Step (dt):</label>
+                        <label for="dt" class="text-sm font-medium text-gray-300">Time Step ($dt$):</label>
                         <input type="number" id="dt" value="0.02" step="0.001" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
                     </div>
                 </div>
@@ -72,39 +100,39 @@
                     <legend class="text-lg font-medium text-gray-300 px-2">Force Multipliers</legend>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                         <div>
-                            <label for="centrifugalMultiplier" class="text-sm font-medium text-gray-300">Centrifugal (k<sub>cf</sub>):</label>
+                            <label for="centrifugalMultiplier" class="text-sm font-medium text-gray-300">Centrifugal ($k_{cf}$):</label>
                             <input type="number" id="centrifugalMultiplier" value="1" step="0.1" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
                         </div>
                         <div>
-                            <label for="coriolisMultiplier" class="text-sm font-medium text-gray-300">Coriolis (k<sub>co</sub>):</label>
+                            <label for="coriolisMultiplier" class="text-sm font-medium text-gray-300">Coriolis ($k_{co}$):</label>
                             <input type="number" id="coriolisMultiplier" value="1" step="0.1" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
                         </div>
                     </div>
                 </fieldset>
 
                 <fieldset class="mb-4 border border-gray-700 p-4 rounded-lg">
-                    <legend class="text-lg font-medium text-gray-300 px-2">Initial Position (X₀, Y₀)</legend>
+                    <legend class="text-lg font-medium text-gray-300 px-2">Initial Position ($X_0, Y_0$)</legend>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                         <div>
-                            <label for="initialX" class="text-sm font-medium text-gray-300">X₀:</label>
+                            <label for="initialX" class="text-sm font-medium text-gray-300">$X_0$:</label>
                             <input type="number" id="initialX" value="100" step="10" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
                         </div>
                         <div>
-                            <label for="initialY" class="text-sm font-medium text-gray-300">Y₀:</label>
+                            <label for="initialY" class="text-sm font-medium text-gray-300">$Y_0$:</label>
                             <input type="number" id="initialY" value="0" step="10" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
                         </div>
                     </div>
                 </fieldset>
 
                 <fieldset class="mb-6 border border-gray-700 p-4 rounded-lg">
-                    <legend class="text-lg font-medium text-gray-300 px-2">Initial Velocity (Ẋ₀, Ẏ₀)</legend>
+                    <legend class="text-lg font-medium text-gray-300 px-2">Initial Velocity ($\dot{X}_0, \dot{Y}_0$)</legend>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                         <div>
-                            <label for="initialVX" class="text-sm font-medium text-gray-300">Ẋ₀:</label>
+                            <label for="initialVX" class="text-sm font-medium text-gray-300">$\dot{X}_0$:</label>
                             <input type="number" id="initialVX" value="0" step="1" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
                         </div>
                         <div>
-                            <label for="initialVY" class="text-sm font-medium text-gray-300">Ẏ₀:</label>
+                            <label for="initialVY" class="text-sm font-medium text-gray-300">$\dot{Y}_0$:</label>
                             <input type="number" id="initialVY" value="5" step="1" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
                         </div>
                     </div>
@@ -114,8 +142,8 @@
                     <label for="presetScenario" class="text-sm font-medium text-gray-300">Preset Scenarios:</label>
                     <select id="presetScenario" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
                         <option value="custom">Custom Values</option>
-                        <option value="stationaryInLenny" selected>Stationary in Lenny's Frame (at X=100, Y=0)</option>
-                        <option value="stationaryInGeorge">Stationary in George's Frame (at X=100, Y=0)</option>
+                        <option value="stationaryInLenny" selected>Stationary in Lenny's Frame (at $X=100, Y=0$)</option>
+                        <option value="stationaryInGeorge">Stationary in George's Frame (at $X=100, Y=0$)</option>
                         <option value="radialOutwardGeorge">Radial Outward from Origin (George's Frame)</option>
                         <option value="foucaultPendulum">Foucault-like (start N, small E velocity)</option>
                         <option value="noCentrifugal">No Centrifugal Force</option>
@@ -151,20 +179,19 @@
             <p>For the Y-component:
                 $$\ddot{Y} = k_{cf} \cdot \omega^2 Y + k_{co} \cdot 2\omega\dot{X}$$
             </p>
-            <p>Where: <br>
-                $\omega$ is the angular velocity of George's frame. <br>
-                $(X, Y)$ are the particle's coordinates in George's frame. <br>
-                $(\dot{X}, \dot{Y})$ are the particle's velocity components. <br>
-                $k_{cf}$ is the Centrifugal Force Multiplier. <br>
-                $k_{co}$ is the Coriolis Force Multiplier. <br>
-                The terms $k_{cf} \cdot m\omega^2 X$ and $k_{cf} \cdot m\omega^2 Y$ are related to the scaled centrifugal force. <br>
-                The terms $-k_{co} \cdot 2m\omega\dot{Y}$ and $k_{co} \cdot 2m\omega\dot{X}$ are related to the scaled Coriolis force.
-            </p>
+            <p>Where:</p>
+            <p>$\omega$ is the angular velocity of George's frame.</p>
+            <p>$(X, Y)$ are the particle's coordinates in George's frame.</p>
+            <p>$(\dot{X}, \dot{Y})$ are the particle's velocity components.</p>
+            <p>$k_{cf}$ is the Centrifugal Force Multiplier.</p>
+            <p>$k_{co}$ is the Coriolis Force Multiplier.</p>
+            <p>The terms $k_{cf} \cdot m\omega^2 X$ and $k_{cf} \cdot m\omega^2 Y$ are related to the scaled centrifugal force.</p>
+            <p>The terms $-k_{co} \cdot 2m\omega\dot{Y}$ and $k_{co} \cdot 2m\omega\dot{X}$ are related to the scaled Coriolis force.</p>
         </div>
 
         <div id="infoPanel" class="mt-6 bg-gray-800 p-4 rounded-xl shadow-lg text-sm text-gray-300">
             <p><strong>Current State:</strong> <span id="simTime">Time: 0.00</span>, <span id="simPos">Pos: (0, 0)</span>, <span id="simVel">Vel: (0, 0)</span></p>
-            <p class="mt-1">A positive ω means George's frame rotates clockwise. The particle path is shown in George's view.</p>
+            <p class="mt-1">A positive $\omega$ means George's frame rotates clockwise. The particle path is shown in George's view.</p>
         </div>
     </div>
 
@@ -194,8 +221,8 @@
         let simState = {
             X: 0, Y: 0, vX: 0, vY: 0,
             omega: 0, dt: 0,
-            centrifugalMultiplier: 1, // New state property
-            coriolisMultiplier: 1,    // New state property
+            centrifugalMultiplier: 1, 
+            coriolisMultiplier: 1,    
             time: 0,
             isRunning: false,
             animationFrameId: null,
@@ -216,6 +243,17 @@
             scale = Math.min(canvasWidth, canvasHeight) / 500; 
         }
 
+        function typesetMathContent() {
+            if (typeof MathJax !== "undefined" && MathJax.typesetPromise) {
+                // Typeset all relevant containers
+                MathJax.typesetPromise([
+                    document.getElementById('equationsDisplay'),
+                    document.getElementById('infoPanel'),
+                    document.querySelector('.control-panel') // Target the whole control panel
+                ]).catch((err) => console.log('MathJax typesetting error: ', err));
+            }
+        }
+
         function setupSimulation() {
             if (simState.animationFrameId) {
                 cancelAnimationFrame(simState.animationFrameId);
@@ -225,8 +263,8 @@
 
             simState.omega = parseFloat(omegaInput.value);
             simState.dt = parseFloat(dtInput.value);
-            simState.centrifugalMultiplier = parseFloat(centrifugalMultiplierInput.value); // Read new input
-            simState.coriolisMultiplier = parseFloat(coriolisMultiplierInput.value);     // Read new input
+            simState.centrifugalMultiplier = parseFloat(centrifugalMultiplierInput.value); 
+            simState.coriolisMultiplier = parseFloat(coriolisMultiplierInput.value);     
             simState.X = parseFloat(initialXInput.value);
             simState.Y = parseFloat(initialYInput.value);
             simState.vX = parseFloat(initialVXInput.value);
@@ -237,10 +275,9 @@
             
             draw();
             updateInfoPanel();
-            // Ensure MathJax re-typesets if equations change dynamically (though they are static here)
-            if (typeof MathJax !== "undefined" && MathJax.typesetPromise) {
-                MathJax.typesetPromise();
-            }
+            // Call MathJax to typeset the equations when settings change
+            // This is now handled by the MathJax.startup.ready or by applyPreset if needed
+            // typesetMathContent(); // Call after content is set
         }
         
         function applyPreset() {
@@ -248,7 +285,6 @@
             const omegaVal = parseFloat(omegaInput.value); 
             const R = 100; 
 
-            // Default force multipliers for most presets
             centrifugalMultiplierInput.value = 1;
             coriolisMultiplierInput.value = 1;
 
@@ -280,35 +316,32 @@
                     break;
                 case "noCentrifugal":
                     centrifugalMultiplierInput.value = 0;
-                    coriolisMultiplierInput.value = 1; // Keep Coriolis normal
-                    // Use a common starting scenario for this
+                    coriolisMultiplierInput.value = 1; 
                     initialXInput.value = R; 
                     initialYInput.value = 0;
                     initialVXInput.value = 0;
-                    initialVYInput.value = 0; // Start at rest in George's frame
+                    initialVYInput.value = 0; 
                     break;
                 case "noCoriolis":
-                    centrifugalMultiplierInput.value = 1; // Keep Centrifugal normal
+                    centrifugalMultiplierInput.value = 1; 
                     coriolisMultiplierInput.value = 0;
-                    // Use a common starting scenario for this
                     initialXInput.value = R;
                     initialYInput.value = 0;
                     initialVXInput.value = 0; 
-                    initialVYInput.value = 5; // Give some initial velocity to see effect
+                    initialVYInput.value = 5; 
                     break;
                 case "custom":
                 default:
-                    // User values are kept, including force multipliers
                     break;
             }
-            setupSimulation();
+            setupSimulation(); 
+            typesetMathContent(); // Ensure math is typeset after presets potentially change labels/info
         }
 
 
         function updatePhysics() {
             const { X, Y, vX, vY, omega, dt, centrifugalMultiplier, coriolisMultiplier } = simState;
 
-            // Scaled equations of motion
             const centrifugalTermX = centrifugalMultiplier * omega * omega * X;
             const centrifugalTermY = centrifugalMultiplier * omega * omega * Y;
             
@@ -417,8 +450,6 @@
                 }
             } else {
                 if (startButton.textContent !== 'Resume Simulation') { 
-                     // This block ensures that if it's a fresh "Start Simulation" click (not resume),
-                     // all current values from inputs (including new multipliers) are loaded.
                      simState.omega = parseFloat(omegaInput.value);
                      simState.dt = parseFloat(dtInput.value);
                      simState.centrifugalMultiplier = parseFloat(centrifugalMultiplierInput.value);
@@ -430,8 +461,6 @@
                      simState.time = 0; 
                      simState.path = [{x: simState.X, y: simState.Y}]; 
                 } else {
-                    // If resuming, just ensure multipliers are up-to-date from inputs
-                    // in case they were changed while paused.
                     simState.centrifugalMultiplier = parseFloat(centrifugalMultiplierInput.value);
                     simState.coriolisMultiplier = parseFloat(coriolisMultiplierInput.value);
                 }
@@ -440,6 +469,7 @@
                 startButton.textContent = 'Pause Simulation';
                 gameLoop();
             }
+            typesetMathContent(); // Re-typeset if omega in info panel changes due to start/resume
         });
 
         resetButton.addEventListener('click', () => {
@@ -448,14 +478,20 @@
         
         presetScenarioInput.addEventListener('change', applyPreset);
 
-        // Update simulation if multipliers are changed directly
         centrifugalMultiplierInput.addEventListener('change', () => {
-            if (!simState.isRunning) setupSimulation(); // If paused, update state and redraw
-            else simState.centrifugalMultiplier = parseFloat(centrifugalMultiplierInput.value); // If running, update live
+            if (!simState.isRunning) setupSimulation(); 
+            else simState.centrifugalMultiplier = parseFloat(centrifugalMultiplierInput.value); 
+            typesetMathContent();
         });
         coriolisMultiplierInput.addEventListener('change', () => {
             if (!simState.isRunning) setupSimulation();
             else simState.coriolisMultiplier = parseFloat(coriolisMultiplierInput.value);
+            typesetMathContent();
+        });
+         omegaInput.addEventListener('change', () => { // Also re-typeset if omega changes
+            if (!simState.isRunning) setupSimulation();
+            else simState.omega = parseFloat(omegaInput.value);
+            typesetMathContent();
         });
 
 
@@ -466,12 +502,11 @@
             }
         });
         
-        resizeCanvas(); 
-        applyPreset(); 
-
-        if (typeof MathJax !== "undefined" && MathJax.typesetPromise) {
-            MathJax.typesetPromise();
-        }
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            resizeCanvas(); 
+            applyPreset(); // This will call setupSimulation and typesetMathContent
+        });
 
     </script>
 </body>
