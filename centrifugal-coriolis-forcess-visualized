@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carousel Particle Simulation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior: none; /* Prevents pull-to-refresh on mobile */
+        }
+        .control-panel input[type="number"] {
+            width: 100%; /* Make inputs take full width of their container */
+        }
+        .control-panel label {
+            display: block; /* Make labels take full width */
+            margin-bottom: 0.25rem; /* Add some space below labels */
+        }
+        canvas {
+            touch-action: none; /* Disable default touch actions like pinch-zoom on canvas */
+        }
+        /* Style for the equations panel */
+        .equations-panel {
+            background-color: #1F2937; /* bg-gray-800 */
+            padding: 1.5rem; /* p-6 */
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-2xl */
+            color: #D1D5DB; /* text-gray-300 */
+        }
+        .equations-panel h3 {
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 600; /* font-semibold */
+            color: #A5B4FC; /* text-indigo-300 */
+            border-bottom: 1px solid #374151; /* border-gray-700 */
+            padding-bottom: 0.5rem; /* pb-2 */
+            margin-bottom: 1rem; /* mb-4 */
+        }
+        .equations-panel p {
+            margin-bottom: 0.75rem; /* mb-3 */
+            line-height: 1.75;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center min-h-screen p-4 selection:bg-indigo-500 selection:text-white">
+
+    <div class="w-full max-w-5xl">
+        <header class="mb-6 text-center">
+            <h1 class="text-4xl font-bold text-indigo-400">Carousel Particle Simulation</h1>
+            <p class="text-lg text-gray-400 mt-2">Observe motion in a rotating frame with adjustable fictitious forces.</p>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-6">
+            <div class="control-panel lg:w-1/3 bg-gray-800 p-6 rounded-xl shadow-2xl">
+                <h2 class="text-2xl font-semibold mb-6 text-indigo-300 border-b border-gray-700 pb-2">Controls</h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="omega" class="text-sm font-medium text-gray-300">Angular Velocity (ω):</label>
+                        <input type="number" id="omega" value="0.05" step="0.01" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                    </div>
+                    <div>
+                        <label for="dt" class="text-sm font-medium text-gray-300">Time Step (dt):</label>
+                        <input type="number" id="dt" value="0.02" step="0.001" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                    </div>
+                </div>
+
+                <fieldset class="mb-4 border border-gray-700 p-4 rounded-lg">
+                    <legend class="text-lg font-medium text-gray-300 px-2">Force Multipliers</legend>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                        <div>
+                            <label for="centrifugalMultiplier" class="text-sm font-medium text-gray-300">Centrifugal (k<sub>cf</sub>):</label>
+                            <input type="number" id="centrifugalMultiplier" value="1" step="0.1" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                        </div>
+                        <div>
+                            <label for="coriolisMultiplier" class="text-sm font-medium text-gray-300">Coriolis (k<sub>co</sub>):</label>
+                            <input type="number" id="coriolisMultiplier" value="1" step="0.1" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="mb-4 border border-gray-700 p-4 rounded-lg">
+                    <legend class="text-lg font-medium text-gray-300 px-2">Initial Position (X₀, Y₀)</legend>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                        <div>
+                            <label for="initialX" class="text-sm font-medium text-gray-300">X₀:</label>
+                            <input type="number" id="initialX" value="100" step="10" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                        </div>
+                        <div>
+                            <label for="initialY" class="text-sm font-medium text-gray-300">Y₀:</label>
+                            <input type="number" id="initialY" value="0" step="10" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="mb-6 border border-gray-700 p-4 rounded-lg">
+                    <legend class="text-lg font-medium text-gray-300 px-2">Initial Velocity (Ẋ₀, Ẏ₀)</legend>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                        <div>
+                            <label for="initialVX" class="text-sm font-medium text-gray-300">Ẋ₀:</label>
+                            <input type="number" id="initialVX" value="0" step="1" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                        </div>
+                        <div>
+                            <label for="initialVY" class="text-sm font-medium text-gray-300">Ẏ₀:</label>
+                            <input type="number" id="initialVY" value="5" step="1" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                        </div>
+                    </div>
+                </fieldset>
+                
+                <div class="mb-6">
+                    <label for="presetScenario" class="text-sm font-medium text-gray-300">Preset Scenarios:</label>
+                    <select id="presetScenario" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5">
+                        <option value="custom">Custom Values</option>
+                        <option value="stationaryInLenny" selected>Stationary in Lenny's Frame (at X=100, Y=0)</option>
+                        <option value="stationaryInGeorge">Stationary in George's Frame (at X=100, Y=0)</option>
+                        <option value="radialOutwardGeorge">Radial Outward from Origin (George's Frame)</option>
+                        <option value="foucaultPendulum">Foucault-like (start N, small E velocity)</option>
+                        <option value="noCentrifugal">No Centrifugal Force</option>
+                        <option value="noCoriolis">No Coriolis Force</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button id="startButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
+                        Start Simulation
+                    </button>
+                    <button id="resetButton" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50">
+                        Reset
+                    </button>
+                </div>
+                 <div class="mt-4">
+                    <label for="trailLength" class="text-sm font-medium text-gray-300">Trail Length (points):</label>
+                    <input type="number" id="trailLength" value="1000" min="10" max="10000" step="100" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5 w-full">
+                </div>
+            </div>
+
+            <div class="lg:w-2/3 bg-gray-800 p-1 rounded-xl shadow-2xl aspect-[4/3] sm:aspect-video lg:aspect-auto">
+                 <canvas id="simulationCanvas" class="w-full h-full bg-gray-900 rounded-lg"></canvas>
+            </div>
+        </div>
+
+        <div id="equationsDisplay" class="equations-panel mt-6">
+            <h3>Equations of Motion (George's Frame)</h3>
+            <p>The acceleration components ($\ddot{X}, \ddot{Y}$) of the particle are given by:</p>
+            <p>For the X-component:
+                $$\ddot{X} = k_{cf} \cdot \omega^2 X - k_{co} \cdot 2\omega\dot{Y}$$
+            </p>
+            <p>For the Y-component:
+                $$\ddot{Y} = k_{cf} \cdot \omega^2 Y + k_{co} \cdot 2\omega\dot{X}$$
+            </p>
+            <p>Where: <br>
+                $\omega$ is the angular velocity of George's frame. <br>
+                $(X, Y)$ are the particle's coordinates in George's frame. <br>
+                $(\dot{X}, \dot{Y})$ are the particle's velocity components. <br>
+                $k_{cf}$ is the Centrifugal Force Multiplier. <br>
+                $k_{co}$ is the Coriolis Force Multiplier. <br>
+                The terms $k_{cf} \cdot m\omega^2 X$ and $k_{cf} \cdot m\omega^2 Y$ are related to the scaled centrifugal force. <br>
+                The terms $-k_{co} \cdot 2m\omega\dot{Y}$ and $k_{co} \cdot 2m\omega\dot{X}$ are related to the scaled Coriolis force.
+            </p>
+        </div>
+
+        <div id="infoPanel" class="mt-6 bg-gray-800 p-4 rounded-xl shadow-lg text-sm text-gray-300">
+            <p><strong>Current State:</strong> <span id="simTime">Time: 0.00</span>, <span id="simPos">Pos: (0, 0)</span>, <span id="simVel">Vel: (0, 0)</span></p>
+            <p class="mt-1">A positive ω means George's frame rotates clockwise. The particle path is shown in George's view.</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simulationCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Inputs
+        const omegaInput = document.getElementById('omega');
+        const dtInput = document.getElementById('dt');
+        const centrifugalMultiplierInput = document.getElementById('centrifugalMultiplier');
+        const coriolisMultiplierInput = document.getElementById('coriolisMultiplier');
+        const initialXInput = document.getElementById('initialX');
+        const initialYInput = document.getElementById('initialY');
+        const initialVXInput = document.getElementById('initialVX');
+        const initialVYInput = document.getElementById('initialVY');
+        const startButton = document.getElementById('startButton');
+        const resetButton = document.getElementById('resetButton');
+        const presetScenarioInput = document.getElementById('presetScenario');
+        const trailLengthInput = document.getElementById('trailLength');
+
+        // Info display
+        const simTimeDisplay = document.getElementById('simTime');
+        const simPosDisplay = document.getElementById('simPos');
+        const simVelDisplay = document.getElementById('simVel');
+
+        let simState = {
+            X: 0, Y: 0, vX: 0, vY: 0,
+            omega: 0, dt: 0,
+            centrifugalMultiplier: 1, // New state property
+            coriolisMultiplier: 1,    // New state property
+            time: 0,
+            isRunning: false,
+            animationFrameId: null,
+            path: [],
+            maxTrailLength: 1000
+        };
+
+        let canvasWidth, canvasHeight, centerX, centerY, scale;
+
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            canvasWidth = canvas.width;
+            canvasHeight = canvas.height;
+            centerX = canvasWidth / 2;
+            centerY = canvasHeight / 2;
+            scale = Math.min(canvasWidth, canvasHeight) / 500; 
+        }
+
+        function setupSimulation() {
+            if (simState.animationFrameId) {
+                cancelAnimationFrame(simState.animationFrameId);
+            }
+            simState.isRunning = false;
+            startButton.textContent = 'Start Simulation';
+
+            simState.omega = parseFloat(omegaInput.value);
+            simState.dt = parseFloat(dtInput.value);
+            simState.centrifugalMultiplier = parseFloat(centrifugalMultiplierInput.value); // Read new input
+            simState.coriolisMultiplier = parseFloat(coriolisMultiplierInput.value);     // Read new input
+            simState.X = parseFloat(initialXInput.value);
+            simState.Y = parseFloat(initialYInput.value);
+            simState.vX = parseFloat(initialVXInput.value);
+            simState.vY = parseFloat(initialVYInput.value);
+            simState.time = 0;
+            simState.path = [{x: simState.X, y: simState.Y}];
+            simState.maxTrailLength = parseInt(trailLengthInput.value);
+            
+            draw();
+            updateInfoPanel();
+            // Ensure MathJax re-typesets if equations change dynamically (though they are static here)
+            if (typeof MathJax !== "undefined" && MathJax.typesetPromise) {
+                MathJax.typesetPromise();
+            }
+        }
+        
+        function applyPreset() {
+            const preset = presetScenarioInput.value;
+            const omegaVal = parseFloat(omegaInput.value); 
+            const R = 100; 
+
+            // Default force multipliers for most presets
+            centrifugalMultiplierInput.value = 1;
+            coriolisMultiplierInput.value = 1;
+
+            switch(preset) {
+                case "stationaryInLenny":
+                    initialXInput.value = R;
+                    initialYInput.value = 0;
+                    initialVXInput.value = 0; 
+                    initialVYInput.value = R * omegaVal; 
+                    break;
+                case "stationaryInGeorge":
+                    initialXInput.value = R;
+                    initialYInput.value = 0;
+                    initialVXInput.value = 0;
+                    initialVYInput.value = 0;
+                    break;
+                case "radialOutwardGeorge":
+                    initialXInput.value = 0;
+                    initialYInput.value = 0;
+                    initialVXInput.value = 20; 
+                    initialVYInput.value = 0;
+                    break;
+                case "foucaultPendulum":
+                    omegaInput.value = 0.01; 
+                    initialXInput.value = 0;
+                    initialYInput.value = R; 
+                    initialVXInput.value = 1;  
+                    initialVYInput.value = 0;
+                    break;
+                case "noCentrifugal":
+                    centrifugalMultiplierInput.value = 0;
+                    coriolisMultiplierInput.value = 1; // Keep Coriolis normal
+                    // Use a common starting scenario for this
+                    initialXInput.value = R; 
+                    initialYInput.value = 0;
+                    initialVXInput.value = 0;
+                    initialVYInput.value = 0; // Start at rest in George's frame
+                    break;
+                case "noCoriolis":
+                    centrifugalMultiplierInput.value = 1; // Keep Centrifugal normal
+                    coriolisMultiplierInput.value = 0;
+                    // Use a common starting scenario for this
+                    initialXInput.value = R;
+                    initialYInput.value = 0;
+                    initialVXInput.value = 0; 
+                    initialVYInput.value = 5; // Give some initial velocity to see effect
+                    break;
+                case "custom":
+                default:
+                    // User values are kept, including force multipliers
+                    break;
+            }
+            setupSimulation();
+        }
+
+
+        function updatePhysics() {
+            const { X, Y, vX, vY, omega, dt, centrifugalMultiplier, coriolisMultiplier } = simState;
+
+            // Scaled equations of motion
+            const centrifugalTermX = centrifugalMultiplier * omega * omega * X;
+            const centrifugalTermY = centrifugalMultiplier * omega * omega * Y;
+            
+            const coriolisTermX = -coriolisMultiplier * 2 * omega * vY;
+            const coriolisTermY = coriolisMultiplier * 2 * omega * vX;
+
+            const accX = centrifugalTermX + coriolisTermX;
+            const accY = centrifugalTermY + coriolisTermY;
+
+            simState.vX += accX * dt;
+            simState.vY += accY * dt;
+            simState.X += simState.vX * dt;
+            simState.Y += simState.vY * dt;
+            simState.time += dt;
+
+            simState.path.push({ x: simState.X, y: simState.Y });
+            if (simState.path.length > simState.maxTrailLength) {
+                simState.path.shift(); 
+            }
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = 'rgba(100, 116, 139, 0.3)'; 
+            ctx.lineWidth = 0.5;
+            const gridSize = 50 * scale; 
+
+            for (let x = centerX % gridSize; x < canvasWidth; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvasHeight);
+                ctx.stroke();
+            }
+            for (let y = centerY % gridSize; y < canvasHeight; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvasWidth, y);
+                ctx.stroke();
+            }
+
+            ctx.strokeStyle = 'rgba(156, 163, 175, 0.6)'; 
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(canvasWidth, centerY); 
+            ctx.moveTo(centerX, 0);
+            ctx.lineTo(centerX, canvasHeight); 
+            ctx.stroke();
+            
+            ctx.fillStyle = 'rgba(156, 163, 175, 0.8)';
+            ctx.font = `${12*window.devicePixelRatio}px Inter`; 
+            ctx.textAlign = 'left';
+            ctx.fillText('X', canvasWidth - 20, centerY - 5);
+            ctx.textAlign = 'right';
+            ctx.fillText('Y', centerX + 15, 15);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            drawGrid();
+
+            ctx.strokeStyle = '#EC4899'; 
+            ctx.lineWidth = 2 * window.devicePixelRatio; 
+            ctx.beginPath();
+            if (simState.path.length > 0) {
+                const startCanvasX = centerX + simState.path[0].x * scale;
+                const startCanvasY = centerY - simState.path[0].y * scale; 
+                ctx.moveTo(startCanvasX, startCanvasY);
+            }
+            for (let i = 1; i < simState.path.length; i++) {
+                const canvasX = centerX + simState.path[i].x * scale;
+                const canvasY = centerY - simState.path[i].y * scale; 
+                ctx.lineTo(canvasX, canvasY);
+            }
+            ctx.stroke();
+
+            const particleCanvasX = centerX + simState.X * scale;
+            const particleCanvasY = centerY - simState.Y * scale; 
+            ctx.fillStyle = '#8B5CF6'; 
+            ctx.beginPath();
+            ctx.arc(particleCanvasX, particleCanvasY, 5 * window.devicePixelRatio, 0, 2 * Math.PI); 
+            ctx.fill();
+        }
+        
+        function updateInfoPanel() {
+            simTimeDisplay.textContent = `Time: ${simState.time.toFixed(2)}`;
+            simPosDisplay.textContent = `Pos: (${simState.X.toFixed(2)}, ${simState.Y.toFixed(2)})`;
+            simVelDisplay.textContent = `Vel: (${simState.vX.toFixed(2)}, ${simState.vY.toFixed(2)})`;
+        }
+
+        function gameLoop() {
+            if (!simState.isRunning) return;
+
+            updatePhysics();
+            draw();
+            updateInfoPanel();
+            
+            simState.animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        startButton.addEventListener('click', () => {
+            if (simState.isRunning) {
+                simState.isRunning = false;
+                startButton.textContent = 'Resume Simulation';
+                if (simState.animationFrameId) {
+                    cancelAnimationFrame(simState.animationFrameId);
+                }
+            } else {
+                if (startButton.textContent !== 'Resume Simulation') { 
+                     // This block ensures that if it's a fresh "Start Simulation" click (not resume),
+                     // all current values from inputs (including new multipliers) are loaded.
+                     simState.omega = parseFloat(omegaInput.value);
+                     simState.dt = parseFloat(dtInput.value);
+                     simState.centrifugalMultiplier = parseFloat(centrifugalMultiplierInput.value);
+                     simState.coriolisMultiplier = parseFloat(coriolisMultiplierInput.value);
+                     simState.X = parseFloat(initialXInput.value);
+                     simState.Y = parseFloat(initialYInput.value);
+                     simState.vX = parseFloat(initialVXInput.value);
+                     simState.vY = parseFloat(initialVYInput.value);
+                     simState.time = 0; 
+                     simState.path = [{x: simState.X, y: simState.Y}]; 
+                } else {
+                    // If resuming, just ensure multipliers are up-to-date from inputs
+                    // in case they were changed while paused.
+                    simState.centrifugalMultiplier = parseFloat(centrifugalMultiplierInput.value);
+                    simState.coriolisMultiplier = parseFloat(coriolisMultiplierInput.value);
+                }
+                simState.maxTrailLength = parseInt(trailLengthInput.value);
+                simState.isRunning = true;
+                startButton.textContent = 'Pause Simulation';
+                gameLoop();
+            }
+        });
+
+        resetButton.addEventListener('click', () => {
+            applyPreset(); 
+        });
+        
+        presetScenarioInput.addEventListener('change', applyPreset);
+
+        // Update simulation if multipliers are changed directly
+        centrifugalMultiplierInput.addEventListener('change', () => {
+            if (!simState.isRunning) setupSimulation(); // If paused, update state and redraw
+            else simState.centrifugalMultiplier = parseFloat(centrifugalMultiplierInput.value); // If running, update live
+        });
+        coriolisMultiplierInput.addEventListener('change', () => {
+            if (!simState.isRunning) setupSimulation();
+            else simState.coriolisMultiplier = parseFloat(coriolisMultiplierInput.value);
+        });
+
+
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            if (!simState.isRunning) {
+                draw();
+            }
+        });
+        
+        resizeCanvas(); 
+        applyPreset(); 
+
+        if (typeof MathJax !== "undefined" && MathJax.typesetPromise) {
+            MathJax.typesetPromise();
+        }
+
+    </script>
+</body>
+</html>
